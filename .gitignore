@@ -8,6 +8,7 @@ yarn.lock
 
 # Chrome profile data
 user_data/
+chrome_profiles/
 
 # Logs
 logs
