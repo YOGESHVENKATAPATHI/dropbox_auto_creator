@@ -1,0 +1,27 @@
+{
+  "name": "dropbox-automation-server",
+  "version": "0.1.0",
+  "description": "Lightweight server for automating Dropbox account/app creation using temp mail",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "nodemon index.js"
+  },
+  "dependencies": {
+    "2captcha": "^3.0.5-2",
+    "axios": "^1.5.0",
+    "cheerio": "^1.0.0-rc.12",
+    "express": "^4.18.2",
+    "puppeteer": "^24.37.5",
+    "puppeteer-extra": "^3.3.6",
+    "puppeteer-extra-plugin-stealth": "^2.11.2",
+    "pg": "^8.13.1",
+    "serverless-http": "^3.0.0"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.22"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

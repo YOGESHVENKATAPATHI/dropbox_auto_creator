@@ -1,0 +1,40 @@
+{
+  "manifest_version": 3,
+  "name": "Dropbox Ghost Automator",
+  "version": "1.0",
+  "description": "Silent local automation tool completely invisible to anti-bot software.",
+  "permissions": [
+    "tabs",
+    "storage",
+    "scripting"
+  ],
+  "host_permissions": [
+    "*://*.temp-mail.io/*",
+    "*://*.dropbox.com/*",
+    "*://dropboxrefesh.vercel.app/*",
+    "http://localhost:3000/*"
+  ],
+  "action": {
+    "default_title": "Start Automation Flow"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["*://*.temp-mail.io/*"],
+      "js": ["content_tempmail.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["*://*.dropbox.com/*"],
+      "js": ["content_dropbox.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["*://dropboxrefesh.vercel.app/*"],
+      "js": ["content_bridge.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}
