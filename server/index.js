@@ -20,7 +20,7 @@ app.use((req, res, next) => {
 
 const NEON_DATABASE_URL =
     process.env.NEON_DATABASE_URL ||
-    'postgresql://neondb_owner:R4FstOoW5aGH@ep-odd-forest-a5no33kc-pooler.us-east-2.aws.neon.tech/neondb?sslmode=require&channel_binding=require';
+    '';
 
 const neonPool = new Pool({
     connectionString: NEON_DATABASE_URL,
