@@ -1,12 +1,33 @@
 const wait = ms => new Promise(r => setTimeout(r, ms));
 
+function randomBetween(min, max) {
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+async function pace(min = 350, max = 850) {
+    await wait(randomBetween(min, max));
+}
+
 function clickElement(el) {
     if (!el) return false;
-    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    el.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
-    el.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
-    el.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-    return true;
+    el.scrollIntoView({ behavior: 'auto', block: 'center' });
+
+    try {
+        el.focus?.();
+        el.click();
+        return true;
+    } catch (e) {
+        try {
+            el.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true }));
+            el.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+            el.dispatchEvent(new MouseEvent('pointerup', { bubbles: true }));
+            el.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
+            el.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+            return true;
+        } catch (err) {
+            return false;
+        }
+    }
 }
 
 async function humanTypeDOM(element, text) {
@@ -27,8 +48,68 @@ async function humanTypeDOM(element, text) {
     element.blur();
 }
 
+function randomFrom(list) {
+    return list[Math.floor(Math.random() * list.length)];
+}
+
+function randomLetters(length) {
+    const chars = 'abcdefghijklmnopqrstuvwxyz';
+    let out = '';
+    for (let i = 0; i < length; i++) out += chars[Math.floor(Math.random() * chars.length)];
+    return out;
+}
+
+function shuffleText(text) {
+    const arr = text.split('');
+    for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr.join('');
+}
+
+function generateStrongPassword() {
+    const lower = 'abcdefghijklmnopqrstuvwxyz';
+    const upper = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    const nums = '0123456789';
+    const syms = '!@#$%^&*()_+-=';
+    const all = lower + upper + nums + syms;
+    const length = randomBetween(14, 18);
+
+    let password =
+        lower[randomBetween(0, lower.length - 1)] +
+        upper[randomBetween(0, upper.length - 1)] +
+        nums[randomBetween(0, nums.length - 1)] +
+        syms[randomBetween(0, syms.length - 1)];
+
+    for (let i = 4; i < length; i++) {
+        password += all[randomBetween(0, all.length - 1)];
+    }
+
+    return shuffleText(password);
+}
+
+function buildUniqueProfile() {
+    const firstPool = [
+        'Aarav','Liam','Noah','Ethan','Mason','Lucas','Elijah','Logan','Benjamin','Henry',
+        'Olivia','Emma','Ava','Sophia','Mia','Amelia','Harper','Evelyn','Aria','Ella',
+        'Riya','Anaya','Zara','Nora','Lina','Ira','Kiran','Aanya','Meera','Sia'
+    ];
+    const lastPool = [
+        'Carter','Brooks','Hayes','Reed','Morris','Wright','Foster','Hunter','Porter','Bennett',
+        'Shaw','Miller','Turner','Parker','Cooper','Ward','Dawson','Hayden','Griffin','Sutton',
+        'Kapoor','Mehta','Sharma','Patel','Verma','Reddy','Nair','Iyer','Malik','Bhat'
+    ];
+
+    return {
+        firstName: `${randomFrom(firstPool)}${randomLetters(2)}`,
+        lastName: `${randomFrom(lastPool)}${randomLetters(3)}`,
+        password: generateStrongPassword()
+    };
+}
+
 function uniqueAppName() {
-    const base = 'YOGESH';
+    const base = randomFrom(['AURORA', 'NEXORA', 'CLOUDMINT', 'SYNCLEAF', 'DATAHIVE', 'DROPNEST', 'FLOWVAULT', 'SKYPULSE']);
     const rand = Math.random().toString(36).slice(2, 10);
     return `${base}${rand}`;
 }
@@ -47,9 +128,10 @@ async function fillRegisterStep(data) {
 
     await wait(3500);
 
-    const firstName = ['James', 'John', 'Emma', 'Olivia'][Math.floor(Math.random() * 4)];
-    const lastName = ['Smith', 'Johnson', 'Brown', 'Jones'][Math.floor(Math.random() * 4)];
-    const password = 'Yogesh@1972005';
+    const profile = buildUniqueProfile();
+    const firstName = profile.firstName;
+    const lastName = profile.lastName;
+    const password = profile.password;
 
     await humanTypeDOM(document.querySelector('input[name="fname"], input[name="first_name"]'), firstName);
     await wait(300);
@@ -73,6 +155,7 @@ async function ensureCreateAppPage(data) {
         const createBtn = document.querySelector('a.app-list__create-btn, .app-list__header a[href="/developers/apps/create"]');
         if (createBtn) {
             console.log('Clicking Create app on My apps page...');
+            await pace(350, 900);
             clickElement(createBtn);
         }
         return;
@@ -95,7 +178,7 @@ async function ensureCreateAppPage(data) {
         const tos = document.querySelector('#accept-tos');
         if (tos && !tos.checked) clickElement(tos);
 
-        await wait(500);
+        await pace(500, 1000);
         const createButton = document.querySelector('#create-button.button-primary, #create-button, button#create-button');
         if (createButton) {
             console.log('Submitting Dropbox app creation...');
@@ -118,6 +201,7 @@ async function configureAppSettings(data) {
             const addBtn = document.querySelector('form#oauth-add-uri-form input[type="submit"], form#oauth-add-uri-form .freshbutton-silver');
             if (addBtn) {
                 console.log('Adding OAuth redirect URI...');
+                await pace(350, 900);
                 clickElement(addBtn);
                 await wait(1200);
             }
@@ -141,6 +225,7 @@ async function configureAppSettings(data) {
     const permissionsTab = document.querySelector('a[data-hash="permissions"], a.c-tabs__label[href="#"]#tab_pyxl3564164188837752160') ||
                            Array.from(document.querySelectorAll('a.c-tabs__label')).find(a => (a.textContent || '').trim().toLowerCase() === 'permissions');
     if (permissionsTab) {
+        await pace(350, 900);
         clickElement(permissionsTab);
         await wait(1200);
     }
@@ -169,6 +254,7 @@ async function handleOAuthAuthorizePages(data) {
     const continueBtn = document.querySelector('#warning-button-continue, .auth-button-continue');
     if (continueBtn) {
         console.log('Clicking OAuth Continue...');
+        await pace(450, 1000);
         clickElement(continueBtn);
         await wait(900);
     }
@@ -176,15 +262,24 @@ async function handleOAuthAuthorizePages(data) {
     const allowBtn = document.querySelector('.auth-button-allow, button.auth-button-allow');
     if (allowBtn) {
         console.log('Clicking OAuth Allow...');
+        await pace(450, 1000);
         clickElement(allowBtn);
     }
 }
 
 function findAccountMenuTrigger() {
-    return (
+    const container =
         document.querySelector('#account-menu-trigger__browse') ||
         document.querySelector('[data-test-id="account-menu-trigger"]') ||
-        document.querySelector('[data-testid="account-menu-trigger"]') ||
+        document.querySelector('[data-testid="account-menu-trigger"]');
+
+    if (container) {
+        const innerButton = container.querySelector('button');
+        if (innerButton) return innerButton;
+        if (container.tagName && container.tagName.toLowerCase() === 'button') return container;
+    }
+
+    return (
         document.querySelector('button[aria-label*="Account menu" i]') ||
         document.querySelector('button[aria-haspopup="true"][aria-label*="account" i]')
     );
@@ -193,70 +288,104 @@ function findAccountMenuTrigger() {
 function findLogoutButton() {
     const direct =
         document.querySelector('a[href*="/logout"]') ||
+        document.querySelector('a[href*="logout"]') ||
         document.querySelector('[data-testid*="logout" i]') ||
-        document.querySelector('[data-test-id*="logout" i]');
+        document.querySelector('[data-test-id*="logout" i]') ||
+        document.querySelector('[role="menuitem"][href*="logout"]');
     if (direct) return direct;
 
     const candidates = Array.from(document.querySelectorAll('a, button, div, span'));
-    return candidates.find(el => (el.textContent || '').trim().toLowerCase() === 'log out') || null;
+    const titleNode = candidates.find(el => (el.textContent || '').trim().toLowerCase() === 'log out');
+    if (!titleNode) return null;
+
+    return (
+        titleNode.closest('a, button, [role="menuitem"]') ||
+        titleNode.parentElement ||
+        titleNode
+    );
 }
 
 function isLoggedOutPage() {
     const path = (location.pathname || '').toLowerCase();
-    if (path.includes('/login') || path.includes('/register')) return true;
+    if (path.includes('/login') || path.includes('/register') || path.includes('/logout')) return true;
 
-    const loginForm = document.querySelector('input[name="login_email"], input[name="susi_email"], input[type="email"]');
-    const loginText = (document.body?.innerText || '').toLowerCase();
-    return !!loginForm || loginText.includes('sign in') || loginText.includes('log in');
+    // Require concrete login form fields to avoid false positives on /home text content.
+    const loginForm = document.querySelector(
+        'input[name="login_email"], input[name="susi_email"], input[type="email"], input[type="password"]'
+    );
+    return !!loginForm;
+}
+
+async function waitForLogoutButton(timeoutMs = 3200, stepMs = 220) {
+    const start = Date.now();
+    while (Date.now() - start < timeoutMs) {
+        const btn = findLogoutButton();
+        if (btn) return btn;
+        await wait(stepMs);
+    }
+    return null;
 }
 
 async function performLogoutSequence() {
     // If already logged out, continue immediately.
     if (isLoggedOutPage()) {
         console.log('Dropbox already logged out. Proceeding to next cycle...');
+        await chrome.storage.local.set({ logoutRetryCount: 0 });
         chrome.runtime.sendMessage({ action: 'logout_completed' });
-        return;
+        return true;
     }
 
-    const menuTrigger = findAccountMenuTrigger();
-    if (menuTrigger) {
-        console.log('Clicking account menu...');
+    let logoutBtn = findLogoutButton();
+
+    // Open account menu in paced attempts because Dropbox UI may re-render instantly.
+    for (let attempt = 1; !logoutBtn && attempt <= 3; attempt++) {
+        const menuTrigger = findAccountMenuTrigger();
+        if (!menuTrigger) {
+            console.log('Account menu not ready yet.');
+            await pace(500, 900);
+            continue;
+        }
+
+        console.log(`Clicking account menu (attempt ${attempt})...`);
         clickElement(menuTrigger);
-        await wait(1200);
+        await pace(700, 1200);
+        logoutBtn = await waitForLogoutButton(2600, 220);
     }
 
-    const logoutBtn = findLogoutButton();
     if (logoutBtn) {
         console.log('Clicking logout button...');
         clickElement(logoutBtn);
-        await wait(2200);
-        chrome.runtime.sendMessage({ action: 'logout_completed' });
-        return;
+        await pace(2800, 4200);
+
+        // Only continue after logout is actually reflected in UI/URL.
+        if (isLoggedOutPage()) {
+            await chrome.storage.local.set({ logoutRetryCount: 0 });
+            chrome.runtime.sendMessage({ action: 'logout_completed' });
+            return true;
+        }
+
+        console.log('Logout clicked but session still active. Retrying...');
     }
 
-    // Retry for delayed menu rendering.
-    await wait(1500);
-    const retryLogoutBtn = findLogoutButton();
-    if (retryLogoutBtn) {
-        console.log('Clicking logout button (retry)...');
-        clickElement(retryLogoutBtn);
-        await wait(2200);
-        chrome.runtime.sendMessage({ action: 'logout_completed' });
-        return;
-    }
-
-    // If URL already points to explicit logout entry, continue to next stage.
-    if ((location.href || '').includes('src=logout')) {
-        console.log('Logout URL loaded; continuing cycle.');
-        chrome.runtime.sendMessage({ action: 'logout_completed' });
-    }
+    return false;
 }
 
 async function startDropboxFlow() {
-    const data = await chrome.storage.local.get(['flowState', 'email']);
+    const data = await chrome.storage.local.get(['flowState', 'email', 'logoutRetryCount']);
 
     if (data.flowState === 'logout_dropbox') {
-        await performLogoutSequence();
+        await pace(300, 700);
+        const done = await performLogoutSequence();
+        if (!done) {
+            const nextRetry = Number(data.logoutRetryCount || 0) + 1;
+            await chrome.storage.local.set({ logoutRetryCount: nextRetry });
+
+            // Keep trying on redirect-heavy Dropbox pages until true logout is detected.
+            if (nextRetry % 5 === 0) {
+                console.log(`Still not logged out after ${nextRetry} attempts.`);
+            }
+            setTimeout(startDropboxFlow, randomBetween(2600, 4200));
+        }
         return;
     }
 

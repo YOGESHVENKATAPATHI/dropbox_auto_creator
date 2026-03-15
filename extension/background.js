@@ -1,9 +1,54 @@
 console.log("Ghost Automator Background Script Loaded.");
 
 const API_BASE_CANDIDATES = [
-    'http://localhost:3000',
+    'https://dropbox-auto-creator.vercel.app',
     'http://127.0.0.1:3000'
 ];
+
+async function beginLogoutCycle() {
+    await chrome.storage.local.set({
+        flowState: 'logout_dropbox',
+        email: '',
+        getEmailDeleteDone: false,
+        oauthRetryCount: 0,
+        logoutRetryCount: 0
+    });
+
+    const dropboxTabs = await chrome.tabs.query({
+        url: ['*://dropbox.com/*', '*://*.dropbox.com/*']
+    });
+
+    let targetTab = dropboxTabs.find(t => (t.url || '').includes('dropbox.com/home'));
+
+    if (!targetTab && dropboxTabs.length > 0) {
+        const firstTab = dropboxTabs[0];
+        await chrome.tabs.update(firstTab.id, { url: 'https://www.dropbox.com/home', active: true });
+        targetTab = firstTab;
+    }
+
+    if (!targetTab) {
+        targetTab = await chrome.tabs.create({ url: 'https://www.dropbox.com/home' });
+    }
+
+    // Inject now, then once again after a short delay to survive redirect churn.
+    try {
+        await chrome.scripting.executeScript({
+            target: { tabId: targetTab.id },
+            files: ['content_dropbox.js']
+        });
+    } catch (err) {
+        console.warn('Immediate Dropbox script injection failed:', err?.message || err);
+    }
+
+    setTimeout(() => {
+        chrome.scripting.executeScript({
+            target: { tabId: targetTab.id },
+            files: ['content_dropbox.js']
+        }).catch((err) => {
+            console.warn('Delayed Dropbox script injection failed:', err?.message || err);
+        });
+    }, 1500);
+}
 
 async function postCredentialsToBackend(payload) {
     let lastError = null;
@@ -31,6 +76,29 @@ async function postCredentialsToBackend(payload) {
 
     throw lastError || new Error('Could not reach any local API endpoint');
 }
+
+// Fallback trigger: if Dropbox redirects to /home during logout cycle,
+// force-run the Dropbox content script so logout automation still executes.
+chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
+    const isUrlChange = typeof changeInfo.url === 'string' && changeInfo.url.length > 0;
+    const isCompleted = changeInfo.status === 'complete';
+    if (!isUrlChange && !isCompleted) return;
+
+    const url = tab?.url || '';
+    if (!url.includes('dropbox.com')) return;
+
+    try {
+        const data = await chrome.storage.local.get(['flowState']);
+        if (data.flowState !== 'logout_dropbox') return;
+
+        await chrome.scripting.executeScript({
+            target: { tabId },
+            files: ['content_dropbox.js']
+        });
+    } catch (err) {
+        console.warn('Failed to force-inject Dropbox script on update:', err?.message || err);
+    }
+});
 
 // Listen for the user clicking the extension icon
 chrome.action.onClicked.addListener(async (tab) => {
@@ -78,26 +146,31 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
     // Start a fresh cycle by logging out from Dropbox first.
     else if (request.action === 'start_new_cycle') {
-        console.log('Starting new automation cycle: opening Dropbox logout flow...');
-        chrome.storage.local.set({
-            flowState: 'logout_dropbox',
-            email: '',
-            getEmailDeleteDone: false,
-            oauthRetryCount: 0
+        console.log('Starting new automation cycle: reusing Dropbox tab and forcing logout...');
+        beginLogoutCycle().catch((err) => {
+            console.error('Failed to begin logout cycle:', err?.message || err);
+            chrome.tabs.create({ url: 'https://www.dropbox.com/home' });
         });
-        chrome.tabs.create({ url: 'https://www.dropbox.com/login?src=logout' });
     }
 
     // After logout sequence, go back to temp-mail for the next cycle.
     else if (request.action === 'logout_completed') {
-        console.log('Dropbox logout completed. Returning to temp-mail...');
-        chrome.storage.local.set({
-            flowState: 'get_email',
-            email: '',
-            getEmailDeleteDone: false,
-            oauthRetryCount: 0
+        chrome.storage.local.get(['flowState'], (data) => {
+            if (data.flowState !== 'logout_dropbox') {
+                console.log('Ignoring logout_completed because flow is no longer logout_dropbox.');
+                return;
+            }
+
+            console.log('Dropbox logout completed. Returning to temp-mail...');
+            chrome.storage.local.set({
+                flowState: 'get_email',
+                email: '',
+                getEmailDeleteDone: false,
+                oauthRetryCount: 0,
+                logoutRetryCount: 0
+            });
+            chrome.tabs.create({ url: 'https://temp-mail.io/' });
         });
-        chrome.tabs.create({ url: 'https://temp-mail.io/' });
     }
 
     // Persist captured Dropbox credentials and refresh token.

@@ -10,9 +10,10 @@
   ],
   "host_permissions": [
     "*://*.temp-mail.io/*",
+    "*://dropbox.com/*",
     "*://*.dropbox.com/*",
     "*://dropboxrefesh.vercel.app/*",
-    "http://localhost:3000/*"
+    "https://dropbox-auto-creator.vercel.app/*"
   ],
   "action": {
     "default_title": "Start Automation Flow"
@@ -27,7 +28,7 @@
       "run_at": "document_idle"
     },
     {
-      "matches": ["*://*.dropbox.com/*"],
+      "matches": ["*://dropbox.com/*", "*://*.dropbox.com/*"],
       "js": ["content_dropbox.js"],
       "run_at": "document_idle"
     },
