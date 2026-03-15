@@ -1,0 +1,24 @@
+{
+  "expo": {
+    "name": "Dropbox Automation App",
+    "slug": "dropbox-automation-app",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "android": {
+      "package": "com.yogesh.dropboxautomation",
+      "allowBackup": false
+    },
+    "splash": {
+      "resizeMode": "contain",
+      "backgroundColor": "#f3f4f6"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "b9e19025-7ea7-42f1-b833-0df72078a340"
+      }
+    }
+  }
+}

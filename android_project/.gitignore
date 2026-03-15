@@ -1,0 +1,18 @@
+# Dependencies
+node_modules/
+.expo/
+.expo-shared/
+
+# Build
+dist/
+web-build/
+
+# IDEs
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
