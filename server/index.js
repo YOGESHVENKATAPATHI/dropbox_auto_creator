@@ -18,16 +18,23 @@ app.use((req, res, next) => {
     next();
 });
 
-const NEON_DATABASE_URL =
+const RESOLVED_DATABASE_URL =
     process.env.NEON_DATABASE_URL ||
+    process.env.DATABASE_URL ||
     '';
 
-const neonPool = new Pool({
-    connectionString: NEON_DATABASE_URL,
-    ssl: { rejectUnauthorized: false }
-});
+const neonPool = RESOLVED_DATABASE_URL
+    ? new Pool({
+        connectionString: RESOLVED_DATABASE_URL,
+        ssl: { rejectUnauthorized: false }
+    })
+    : null;
 
 async function ensureDropboxAppCredsTable() {
+    if (!neonPool) {
+        throw new Error('Database connection is not configured. Set NEON_DATABASE_URL or DATABASE_URL.');
+    }
+
     const sql = `
         CREATE TABLE IF NOT EXISTS dropbox_app_credentials (
             id BIGSERIAL PRIMARY KEY,
@@ -146,6 +153,13 @@ app.post('/save-credentials', async (req, res) => {
     }
 
     try {
+        if (!neonPool) {
+            return res.status(500).json({
+                error: 'Database is not configured',
+                details: 'Set NEON_DATABASE_URL or DATABASE_URL in server environment variables'
+            });
+        }
+
         await ensureDropboxAppCredsTable();
 
         const upsertSql = `
@@ -181,6 +195,23 @@ app.post('/save-credentials', async (req, res) => {
     } catch (err) {
         console.error('Failed saving Dropbox credentials:', err.message);
         return res.status(500).json({ error: 'Failed saving credentials', details: err.message });
+    }
+});
+
+app.get('/health/db', async (req, res) => {
+    if (!neonPool) {
+        return res.status(500).json({
+            ok: false,
+            error: 'Database is not configured',
+            details: 'Set NEON_DATABASE_URL or DATABASE_URL'
+        });
+    }
+
+    try {
+        const result = await neonPool.query('SELECT NOW() AS now');
+        return res.json({ ok: true, now: result.rows[0]?.now || null });
+    } catch (err) {
+        return res.status(500).json({ ok: false, error: 'Database connection failed', details: err.message });
     }
 });
 
